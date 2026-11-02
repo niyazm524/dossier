@@ -7,6 +7,8 @@ import { SOURCE_INFO } from "./sources";
 
 export type JobSearchProblem =
   | "pending"
+  /** The catalogue rejected the search parameters, not its response contract. */
+  | "query"
   /** The source isn't offered on this server (DOSSIER_JOBS_ARBEITSAGENTUR=off). */
   | "off"
   /** The Bundesagentur für Arbeit's note hasn't been accepted yet (#223). */
@@ -41,6 +43,7 @@ export class JobSearchError extends Error {
 export function jobSearchError(problem: JobSearchProblem, source: JobSource, { country = "", detail }: { country?: string; detail?: string } = {}) {
   const { name, quotaPeriod } = SOURCE_INFO[source];
   const message = {
+    query: `${name} rejected these search parameters. Check the filters or start a new search.`,
     pending: "Search registered. Results are being collected; run this search again later.",
     off: `${name} isn't offered on this server. Choose another source in Settings → Job search.`,
     "not-accepted": `Read the note about ${name} and tick “I understand” before Dossier searches it.`,

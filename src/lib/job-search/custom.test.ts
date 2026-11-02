@@ -65,7 +65,7 @@ describe("Custom HTTP catalogue", () => {
     await expect(custom.search(query, credentials, "same")).rejects.toMatchObject({ problem: "changed" });
   });
 
-  it.each([[401, "key"], [403, "key"], [429, "quota"], [503, "unavailable"], [302, "changed"]])("handles HTTP %s without exposing the response body", async (status, problem) => {
+  it.each([[401, "key"], [403, "key"], [422, "query"], [429, "quota"], [503, "unavailable"], [302, "changed"]])("handles HTTP %s without exposing the response body", async (status, problem) => {
     stubFetch(() => json({ error: "sensitive upstream message" }, { status: status as number }));
     await expect(custom.search(query, credentials, null)).rejects.toMatchObject({ problem });
   });

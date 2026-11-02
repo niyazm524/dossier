@@ -33,6 +33,7 @@ export async function requestJson(
   const detail = `${url.pathname}: HTTP ${response.status}`;
   if (response.status === 401 || response.status === 403) throw jobSearchError("key", source, { detail });
   if (response.status === 429) throw jobSearchError("quota", source, { detail });
+  if (source === "CUSTOM" && response.status === 422) throw jobSearchError("query", source, { detail });
   if (!response.ok) throw jobSearchError(response.status >= 500 ? "unavailable" : "changed", source, { detail });
 
   const text = await readLimited(response, MAX_BYTES);
