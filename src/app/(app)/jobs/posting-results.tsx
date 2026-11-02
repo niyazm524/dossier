@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 
+import { PostingText } from "@/components/posting-text";
 import { ScoreBadge } from "@/components/score-badge";
 import { linksAttribution, SourceAttribution } from "@/components/source-attribution";
 import { toast, toastResult } from "@/components/toast";
@@ -554,7 +555,7 @@ function PostingDetail({
                 This is only the start of the posting. When you start an application, you can paste the rest from the posting&apos;s page.
               </p>
             )}
-            <div className="text-sm leading-relaxed whitespace-pre-line">{text.text || "The source didn't send a description."}</div>
+            <PostingText>{text.text || "The source didn't send a description."}</PostingText>
           </>
         )}
       </div>

@@ -178,6 +178,14 @@ describe("the search form", () => {
 });
 
 describe("the results", () => {
+  it("formats Markdown in the selected posting", () => {
+    renderScreen({ search: stored([posting("a", { description: "## Requirements\n\n- **React**\n\n[Apply](https://example.com/apply)" })]) });
+    const text = within(screen.getByRole("region", { name: "Posting text" }));
+    expect(text.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
+    expect(text.getByRole("listitem")).toHaveTextContent("React");
+    expect(text.getByRole("link", { name: "Apply" })).toHaveAttribute("href", "https://example.com/apply");
+  });
+
   it("lists the postings and shows the first one's whole text", () => {
     renderScreen({ search: stored([posting("a", { salary: "EUR 70,000 a year", remote: true }), posting("b")], "cursor:2") });
     expect(screen.getByText("2 postings from JSearch, more to come · searched today at 14:32")).toBeInTheDocument();

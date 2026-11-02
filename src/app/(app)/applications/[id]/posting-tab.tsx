@@ -5,6 +5,7 @@ import { useId } from "react";
 
 import { FactList } from "@/components/fact-list";
 import { MatchRows } from "@/components/match-rows";
+import { PostingText } from "@/components/posting-text";
 import type { Match, Requirement } from "@/lib/application-data";
 import type { FactItem } from "@/lib/profile";
 
@@ -32,7 +33,7 @@ function shortLink(url: string): string {
 /**
  * The Job posting tab (APP-11): what the user tells the AI for this
  * application (APP-15), how the profile matches the posting and the posting
- * as pasted, whitespace kept, with a link to the original if saved.
+ * with Markdown text formatting and a link to the original if saved.
  */
 export function PostingTab({
   applicationId,
@@ -104,7 +105,7 @@ export function PostingTab({
         <div className={match && match.items.length > 0 ? "flex flex-col gap-2.5 border-t border-line pt-5" : "flex flex-col gap-2.5"}>
           <h2 className="text-[15px] font-medium">Original posting</h2>
           {posting.text.trim() ? (
-            <p className="text-sm leading-[1.65] whitespace-pre-wrap text-document">{posting.text}</p>
+            <PostingText className="text-document">{posting.text}</PostingText>
           ) : (
             <p className="text-sm text-muted">No posting was saved with this application.</p>
           )}

@@ -165,7 +165,8 @@ describe("the document tabs (E8-2)", () => {
   it("opens on the tab from the URL", () => {
     render(<ApplicationView {...props} initialTab="posting" />);
     expect(screen.getByRole("tab", { name: /Job posting/ })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText(/Ledgerly is hiring\./)).toHaveTextContent("Ledgerly is hiring. - Figma");
+    expect(screen.getByText(/Ledgerly is hiring\./)).toHaveTextContent("Ledgerly is hiring.");
+    expect(within(screen.getByText(/Ledgerly is hiring\./).parentElement!).getByRole("listitem")).toHaveTextContent("Figma");
     // The application's facts for the AI come first (APP-15).
     const facts = screen.getByRole("region", { name: "Facts for this application" });
     expect(within(facts).getByLabelText("Fact 1")).toHaveValue("I know their product as a customer.");
@@ -694,7 +695,7 @@ describe("the Job posting tab (E8-7)", () => {
     expect(screen.getByText("1 of 2 covered by your profile")).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Requirements" })).getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Original posting" })).toBeInTheDocument();
-    expect(screen.getByText(/^Ledgerly is hiring\./)).toHaveClass("whitespace-pre-wrap");
+    expect(screen.getByText(/^Ledgerly is hiring\./)).toBeInTheDocument();
     expect(screen.getByText("Pasted 27 Sep")).toBeInTheDocument();
   });
 
