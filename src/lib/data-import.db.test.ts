@@ -402,3 +402,20 @@ describe("parseExport (E10-6)", () => {
     expect(parseExport(JSON.stringify(damaged))).toMatchObject({ ok: false, error: expect.stringMatching(/^That export is damaged or incomplete \(applications\.0\.status/) });
   });
 });
+
+
+it("keeps local Custom endpoint credentials and ignores replacements from an import", async () => {
+  await prisma().setting.createMany({ data: [
+    { key: "customJobUrl", value: "http://jobfeed:8000" },
+    { key: "customJobUsername", value: "reader" },
+    { key: "customJobPasswordEnc", value: encryptSecret(JOB_SOURCE_KEY, "local-secret", secret) },
+  ] });
+  const file = await asFile();
+  await importExport(prisma(), { ...file, settings: [...file.settings,
+    { key: "customJobUrl", value: "https://other.example" },
+    { key: "customJobUsername", value: "other" },
+    { key: "customJobPasswordEnc", value: "other" },
+  ] });
+  expect((await prisma().setting.findUniqueOrThrow({ where: { key: "customJobUrl" } })).value).toBe("http://jobfeed:8000");
+  expect(decryptSecret(JOB_SOURCE_KEY, (await prisma().setting.findUniqueOrThrow({ where: { key: "customJobPasswordEnc" } })).value, secret)).toBe("local-secret");
+});

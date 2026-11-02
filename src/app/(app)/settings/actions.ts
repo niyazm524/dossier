@@ -15,6 +15,7 @@ import { deleteAllBackups } from "@/lib/backups";
 import { env } from "@/lib/env";
 import { JobSearchError, testSource } from "@/lib/job-search";
 import { credentialsFor, jobSearchView, loadJobSearchConfig, requestContext } from "@/lib/job-search/config";
+import { customUrlSchema } from "@/lib/job-search/custom";
 import { JOB_SOURCES, JSEARCH_HOSTS } from "@/lib/job-search/search";
 import { cancelJob, startJob } from "@/lib/jobs/runner";
 import { checkForUpdate } from "@/lib/update-check";
@@ -25,7 +26,7 @@ import { prisma } from "@/lib/prisma";
 import { jevKey, loadScoringConfig, scoringView } from "@/lib/scoring/config";
 import { SCORERS } from "@/lib/scoring/scorers";
 import { askJev } from "@/lib/scoring/typesafe";
-import { applySecretChange, JOB_SOURCE_KEY, TYPESAFE_KEY } from "@/lib/secrets";
+import { applySecretChange, encryptSecret, JOB_SOURCE_KEY, TYPESAFE_KEY } from "@/lib/secrets";
 
 import { seedBuiltIns } from "../../../../prisma/seed/built-ins";
 import { isJobRetention } from "@/lib/settings";
@@ -157,6 +158,30 @@ export const saveJobSourceKey = action(
     const field = source === "JSEARCH" ? "jsearchKeyEnc" : "adzunaKeyEnc";
     const current = await loadSettings();
     await saveSettings({ [field]: applySecretChange(JOB_SOURCE_KEY, current[field], change) });
+    return loadView();
+  },
+);
+
+/** The endpoint and optional Basic credentials are saved together; passwords never come back. */
+export const saveCustomJobSource = action(
+  z.object({
+    url: customUrlSchema,
+    username: z.string().trim().max(300).refine((value) => !/[:\r\n]/.test(value), "The username cannot contain a colon or a newline."),
+    password: z.discriminatedUnion("action", [
+      z.object({ action: z.literal("keep") }),
+      z.object({ action: z.literal("clear") }),
+      z.object({ action: z.literal("set"), value: z.string().min(1).max(1000) }),
+    ]),
+  }),
+  async ({ url, username, password }) => {
+    const current = await loadSettings();
+    const normalized = url.replace(/\/+$/, "");
+    // A saved password must never silently move to another service or account.
+    const keep = current.customJobUrl === normalized && current.customJobUsername === (username || null);
+    const encrypted = password.action === "set" ? encryptSecret(JOB_SOURCE_KEY, password.value)
+      : password.action === "keep" && keep ? current.customJobPasswordEnc : null;
+    if (Boolean(username) !== Boolean(encrypted)) throw new ActionError("Set both a username and password, or remove both to use no authentication. Re-enter the password when changing the URL or username.");
+    await saveSettings({ customJobUrl: normalized, customJobUsername: username || null, customJobPasswordEnc: encrypted });
     return loadView();
   },
 );

@@ -220,3 +220,27 @@ describe("fullText", () => {
     expect(await fullText({ ...EMPTY_POSTING, source: "JSEARCH", complete: false })).toBeNull();
   });
 });
+
+
+describe("Custom catalogue subscription lifecycle", () => {
+  it("does not freeze pending as a historical empty result; stores ready results with stable IDs", async () => {
+    await saveSettings({ jobSource: "CUSTOM", customJobUrl: "http://jobfeed:8000" });
+    let ready = false;
+    const item = { id: "canonical-1", title: "Product Designer", company: "Example", location: "Hamburg", remote: true, salary: "", postedAt: null, url: "https://jobs.example/1", description: "Fixture: design products.", complete: true };
+    const requests = stubFetch(() => json(ready ? { items: [item], nextCursor: null, searchStatus: "ready" } : { items: [], nextCursor: null, searchStatus: "pending" }));
+    expect(await runSearch(query)).toMatchObject({ ok: false, problem: "pending" });
+    expect(await countSearches()).toBe(0);
+    ready = true;
+    const run = await runSearch(query);
+    expect(run.ok).toBe(true);
+    const kept = await loadSearch(run.ok ? run.id : "");
+    expect(kept).toMatchObject({ source: "CUSTOM", postings: [{ externalId: "canonical-1", company: "Example" }] });
+    expect(requests).toHaveLength(2);
+    const { state, ...posting } = kept!.postings[0];
+    void state;
+    await savePosting(posting);
+    await runSearch(query);
+    expect((await loadSearch(run.ok ? run.id : ""))!.postings[0].state.saved).toBe(true);
+    expect(await prisma().posting.count({ where: { source: "CUSTOM", externalId: "canonical-1" } })).toBe(1);
+  });
+});

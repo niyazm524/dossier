@@ -106,3 +106,14 @@ describe("buildExport (E10-4)", () => {
     expect(exportSchema.safeParse({ format: "something-else" }).success).toBe(false);
   });
 });
+
+
+it("never exports the Custom service endpoint or credentials, even with API keys included", async () => {
+  await prisma().setting.createMany({ data: [
+    { key: "customJobUrl", value: "http://private-catalogue:8000" },
+    { key: "customJobUsername", value: "private-reader" },
+    { key: "customJobPasswordEnc", value: encryptSecret(JOB_SOURCE_KEY, "custom-secret") },
+  ] });
+  const file = JSON.stringify(await buildExport(prisma(), { now, includeApiKey: true }));
+  expect(file).not.toMatch(/customJob|private-catalogue|private-reader|custom-secret/);
+});

@@ -581,6 +581,7 @@ model Note {
 
 /// The job sources Find jobs can search (E14-1 to E14-3).
 enum PostingSource {
+  CUSTOM
   JSEARCH
   ADZUNA
   ARBEITSAGENTUR

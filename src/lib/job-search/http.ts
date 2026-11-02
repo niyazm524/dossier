@@ -14,7 +14,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 export async function requestJson(
   source: JobSource,
   url: URL,
-  { headers = {}, signal, timeoutMs = REQUEST_TIMEOUT_MS }: { headers?: Record<string, string>; signal?: AbortSignal; timeoutMs?: number } = {},
+  { headers = {}, signal, timeoutMs = REQUEST_TIMEOUT_MS, redirect }: { headers?: Record<string, string>; signal?: AbortSignal; timeoutMs?: number; redirect?: RequestRedirect } = {},
 ): Promise<unknown> {
   const timeout = AbortSignal.timeout(timeoutMs);
   let response: Response;
@@ -23,6 +23,7 @@ export async function requestJson(
       headers: { accept: "application/json", ...headers },
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       cache: "no-store",
+      redirect,
     });
   } catch (error) {
     const reason = timeout.aborted ? "timed out" : ((error as { cause?: { code?: string } }).cause?.code ?? "request failed");

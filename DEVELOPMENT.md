@@ -180,6 +180,8 @@ docker compose exec -e JOBS_LIVE=adzuna -e ADZUNA_TEST_APP_ID=… -e ADZUNA_TEST
 docker compose exec -e JOBS_LIVE=freehire app yarn vitest run src/lib/job-search/sources.live.test.ts
 ```
 
+The fork also supports a Custom HTTP catalogue; see [CUSTOM-JOB-SOURCE.md](CUSTOM-JOB-SOURCE.md) for its API contract and connection settings.
+
 ## Scoring
 
 Score in Find jobs and the job agent score postings with what Settings → Scoring chose (`src/lib/scoring`): the AI model's `score-posting` task, or Jev, TypeSafe's System One model, with the user's TypeSafe key. Until a choice is saved, `DOSSIER_SCORER` and `DOSSIER_TYPESAFE_KEY` decide. `loadPostingScorer()` in `index.ts` sets up either one; both give a score from 0 to 100 with up to four reasons and three red flags, and `scoredWith` names what made it.

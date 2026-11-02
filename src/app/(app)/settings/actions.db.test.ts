@@ -20,6 +20,7 @@ import {
   listAiModels,
   saveAiProvider,
   saveApiKey,
+  saveCustomJobSource,
   saveJobSearchDetails,
   saveJobSource,
   saveJobSourceKey,
@@ -165,6 +166,7 @@ describe("job search settings (E14-4)", () => {
         adzuna: { appId: "", keyState: "none" },
         arbeitsagentur: { offered: true, acceptedAt: null },
         freehire: { host: "freehire.me" },
+      custom: { url: "", username: "", passwordState: "none" },
       },
     });
     await saveJobSource({ source: "OFF" });
@@ -296,5 +298,36 @@ describe("the MCP connector (#221, #281)", () => {
     expect(await addConnectorRedirect({ uri: "http://localhost:5678/callback" })).toMatchObject({ ok: true, data: { redirects: [n8n, "http://localhost:5678/callback"] } });
     expect((await settings()).connectorRedirects).toEqual([n8n, "http://localhost:5678/callback"]);
     expect(await removeConnectorRedirect({ uri: n8n })).toEqual({ ok: true, data: { redirects: ["http://localhost:5678/callback"] } });
+  });
+});
+
+
+describe("Custom source settings", () => {
+  it("persists encrypted credentials, keeps them on unchanged saves, and clears authentication", async () => {
+    const result = await saveCustomJobSource({ url: "http://jobfeed:8000/", username: "reader", password: { action: "set", value: " secret " } });
+    expect(result).toMatchObject({ ok: true, data: { custom: { url: "http://jobfeed:8000", username: "reader", passwordState: "set" } } });
+    expect(JSON.stringify(result)).not.toContain(" secret ");
+    const saved = await settings();
+    expect(decryptSecret(JOB_SOURCE_KEY, saved.customJobPasswordEnc!)).toBe(" secret ");
+    await saveCustomJobSource({ url: "http://jobfeed:8000", username: "reader", password: { action: "keep" } });
+    expect((await settings()).customJobPasswordEnc).toBe(saved.customJobPasswordEnc);
+    await saveCustomJobSource({ url: "http://jobfeed:8000", username: "", password: { action: "clear" } });
+    expect(await settings()).toMatchObject({ customJobUsername: null, customJobPasswordEnc: null });
+    expect(await saveJobSource({ source: "CUSTOM" })).toMatchObject({ ok: true, data: { source: "CUSTOM" } });
+  });
+
+  it("does not transfer a saved password to another endpoint or username", async () => {
+    await saveCustomJobSource({ url: "http://jobfeed:8000", username: "reader", password: { action: "set", value: "secret" } });
+    expect(await saveCustomJobSource({ url: "https://other.example", username: "reader", password: { action: "keep" } })).toMatchObject({ ok: false });
+    expect(await saveCustomJobSource({ url: "http://jobfeed:8000", username: "other", password: { action: "keep" } })).toMatchObject({ ok: false });
+    expect((await settings()).customJobUrl).toBe("http://jobfeed:8000");
+  });
+
+  it("tests only the catalogue health endpoint", async () => {
+    await saveCustomJobSource({ url: "http://jobfeed:8000", username: "", password: { action: "keep" } });
+    await saveJobSource({ source: "CUSTOM" });
+    const requests = stubFetch(() => json({ status: "ok" }));
+    expect(await testJobSource({})).toMatchObject({ ok: true, data: { connected: true } });
+    expect(requests[0].url.href).toBe("http://jobfeed:8000/health");
   });
 });

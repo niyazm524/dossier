@@ -8,6 +8,7 @@ import { JobSearchError, jobSearchError } from "./errors";
 import { adzuna } from "./adzuna";
 import { arbeitsagentur } from "./arbeitsagentur";
 import { freehire } from "./freehire";
+import { custom } from "./custom";
 import { jsearch } from "./jsearch";
 import { postingKey, type FoundPosting, type JobSource, type SearchPage, type SearchQuery } from "./search";
 import { sourceCovers } from "./sources";
@@ -25,6 +26,7 @@ const ADAPTERS: { [S in JobSource]: JobSourceAdapter<S> } = {
   ADZUNA: adzuna,
   ARBEITSAGENTUR: arbeitsagentur,
   FREEHIRE: freehire,
+  CUSTOM: custom,
 };
 
 const adapterFor = <S extends JobSource>(source: S) => ADAPTERS[source] as JobSourceAdapter<S>;
@@ -51,6 +53,9 @@ export async function searchPostings<S extends JobSource>(
 ): Promise<SearchPage> {
   if (!sourceCovers(source, query.country)) throw jobSearchError("country", source, { country: query.country });
   const adapter = adapterFor(source);
+  // Every Custom request registers/refreshes a subscription in the external service.
+  // Its catalogue owns caching; a pending/empty response must not hide new results.
+  if (source === "CUSTOM") return logged(() => adapter.search(query, credentials, next, context));
   const key = `search:${source}:${JSON.stringify(query)}:${next ?? ""}`;
   const hit = cached<SearchPage>(key);
   if (hit) return hit;

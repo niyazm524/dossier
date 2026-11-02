@@ -27,6 +27,7 @@ describe("resolveJobSearchConfig", () => {
       adzuna: { appId: "", keyState: "none" },
       arbeitsagentur: { offered: true, acceptedAt: null },
       freehire: { host: "freehire.me" },
+      custom: { url: "", username: "", passwordState: "none" },
     });
   });
 
@@ -153,5 +154,18 @@ describe("FreeHire from the environment", () => {
     const own = resolveJobSearchConfig(nothingSaved, { DOSSIER_FREEHIRE_URL: "https://jobs.example:8443" });
     expect(own.freehire).toEqual({ url: "https://jobs.example:8443" });
     expect(jobSearchView(own).freehire).toEqual({ host: "jobs.example:8443" });
+  });
+});
+
+
+describe("Custom credentials", () => {
+  it("decrypts the password only on the server and omits it from the view", () => {
+    const config = resolveJobSearchConfig({ ...nothingSaved, jobSource: "CUSTOM", customJobUrl: "http://jobfeed:8000", customJobUsername: "reader", customJobPasswordEnc: encryptSecret(JOB_SOURCE_KEY, "secret") }, {});
+    expect(credentialsFor(config, "CUSTOM")).toEqual({ url: "http://jobfeed:8000", auth: { username: "reader", password: "secret" } });
+    expect(jobSearchView(config).custom).toEqual({ url: "http://jobfeed:8000", username: "reader", passwordState: "set" });
+    expect(() => credentialsFor(resolveJobSearchConfig(nothingSaved, {}), "CUSTOM")).toThrow(/URL/);
+    expect(credentialsFor({ ...config, custom: { url: "http://jobfeed:8000", username: "", password: null, passwordState: "none" } }, "CUSTOM")).toEqual({ url: "http://jobfeed:8000" });
+    expect(() => credentialsFor({ ...config, custom: { ...config.custom, password: null } }, "CUSTOM")).toThrow(/both/);
+    expect(() => credentialsFor({ ...config, custom: { ...config.custom, passwordState: "unreadable" } }, "CUSTOM")).toThrow(/can't be read/);
   });
 });

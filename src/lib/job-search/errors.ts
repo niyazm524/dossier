@@ -6,6 +6,7 @@ import { SOURCE_INFO } from "./sources";
 // (E14-1). A source's own error text never reaches the screen or the logs.
 
 export type JobSearchProblem =
+  | "pending"
   /** The source isn't offered on this server (DOSSIER_JOBS_ARBEITSAGENTUR=off). */
   | "off"
   /** The Bundesagentur für Arbeit's note hasn't been accepted yet (#223). */
@@ -40,10 +41,11 @@ export class JobSearchError extends Error {
 export function jobSearchError(problem: JobSearchProblem, source: JobSource, { country = "", detail }: { country?: string; detail?: string } = {}) {
   const { name, quotaPeriod } = SOURCE_INFO[source];
   const message = {
+    pending: "Search registered. Results are being collected; run this search again later.",
     off: `${name} isn't offered on this server. Choose another source in Settings → Job search.`,
     "not-accepted": `Read the note about ${name} and tick “I understand” before Dossier searches it.`,
-    "no-key": `Add your ${name} ${source === "ADZUNA" ? "app ID and key" : "key"} in Settings → Job search first.`,
-    key: `${name} didn't accept your key. Check it in Settings → Job search.`,
+    "no-key": source === "CUSTOM" ? "Check your Custom source URL and credentials in Settings → Job search." : `Add your ${name} ${source === "ADZUNA" ? "app ID and key" : "key"} in Settings → Job search first.`,
+    key: source === "CUSTOM" ? "Your Custom source refused access. Check its username and password in Settings → Job search." : `${name} didn't accept your key. Check it in Settings → Job search.`,
     quota: quotaPeriod
       ? `You've used up your ${name} searches for ${quotaPeriod}. Try again then, or move to a bigger plan.`
       : `${name} is limiting searches right now. Wait a minute and try again.`,

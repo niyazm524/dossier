@@ -51,6 +51,9 @@ const API_KEY_SETTING = "apiKeyEnc";
 export const SECRET_SETTINGS: readonly string[] = [API_KEY_SETTING, "jsearchKeyEnc", "adzunaKeyEnc", "typesafeKeyEnc"];
 /** The settings that belong to this install rather than its data (the usage ping's and its consent, the update check's, the Google client and the browser's time zone): never exported, and kept by an import. */
 export const INSTALL_SETTINGS: readonly string[] = [
+  "customJobUrl",
+  "customJobUsername",
+  "customJobPasswordEnc",
   "usagePingId",
   "usagePingDay",
   "usagePingChoice",

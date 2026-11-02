@@ -28,9 +28,11 @@ export type JobSearchConfig = {
   arbeitsagentur: { offered: boolean; acceptedAt: string | null };
   /** The FreeHire to search: freehire.me, or a self-hosted one (DOSSIER_FREEHIRE_URL). */
   freehire: { url: string };
+  custom: { url: string; username: string; password: string | null; passwordState: JobKeyState };
 };
 
-type SavedJobSettings = Pick<SettingsData, "jobSource" | "jsearchKeyEnc" | "jsearchHost" | "adzunaAppId" | "adzunaKeyEnc" | "arbeitsagenturAcceptedAt">;
+type SavedJobSettings = Pick<SettingsData, "jobSource" | "jsearchKeyEnc" | "jsearchHost" | "adzunaAppId" | "adzunaKeyEnc" | "arbeitsagenturAcceptedAt"> &
+  Partial<Pick<SettingsData, "customJobUrl" | "customJobUsername" | "customJobPasswordEnc">>;
 type JobEnv = Pick<
   Env,
   | "DOSSIER_JOBS_SOURCE"
@@ -64,6 +66,7 @@ function keyOf(stored: string | null, fromEnv: string | undefined, secret?: stri
 }
 
 export function resolveJobSearchConfig(saved: SavedJobSettings, source: JobEnv, secret?: string): JobSearchConfig {
+  const customPassword = keyOf(saved.customJobPasswordEnc ?? null, undefined, secret);
   const jsearchKey = keyOf(saved.jsearchKeyEnc, source.DOSSIER_JSEARCH_KEY, secret);
   const offered = source.DOSSIER_JOBS_ARBEITSAGENTUR !== "off";
   const chosen = saved.jobSource ? (saved.jobSource === "OFF" ? null : saved.jobSource) : source.DOSSIER_JOBS_SOURCE ? FROM_ENV[source.DOSSIER_JOBS_SOURCE] : null;
@@ -82,6 +85,7 @@ export function resolveJobSearchConfig(saved: SavedJobSettings, source: JobEnv, 
     },
     arbeitsagentur: { offered, acceptedAt: saved.arbeitsagenturAcceptedAt },
     freehire: { url: source.DOSSIER_FREEHIRE_URL ?? FREEHIRE_URL },
+    custom: { url: saved.customJobUrl ?? "", username: saved.customJobUsername ?? "", password: customPassword.key, passwordState: customPassword.keyState },
   };
 }
 
@@ -108,6 +112,7 @@ export function jobSearchView(config: JobSearchConfig): JobSearchSettingsView {
     adzuna: { appId: config.adzuna.appId, keyState: config.adzuna.keyState },
     arbeitsagentur: config.arbeitsagentur,
     freehire: { host: new URL(config.freehire.url).host },
+    custom: { url: config.custom.url, username: config.custom.username, passwordState: config.custom.passwordState },
   };
 }
 
@@ -151,6 +156,13 @@ export function credentialsFor<S extends JobSource>(config: JobSearchConfig, sou
       if (!config.arbeitsagentur.offered) throw jobSearchError("off", source);
       if (!config.arbeitsagentur.acceptedAt) throw jobSearchError("not-accepted", source);
       return {} as SourceCredentials[S];
+    }
+    case "CUSTOM": {
+      const { url, username, password, passwordState } = config.custom;
+      if (!url) throw new JobSearchError("no-key", "Add your Custom source URL in Settings → Job search first.");
+      if (passwordState === "unreadable") throw new JobSearchError("no-key", "Your saved Custom password can't be read. Enter it again in Settings → Job search.");
+      if (Boolean(username) !== Boolean(password)) throw new JobSearchError("no-key", "Set both the Custom username and password, or remove both to use no authentication.");
+      return { url, ...(username && password ? { auth: { username, password } } : {}) } as SourceCredentials[S];
     }
     case "FREEHIRE":
       return {} as SourceCredentials[S];

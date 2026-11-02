@@ -4,11 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { JobSearchSettingsView } from "@/lib/job-search/sources";
 
-import { saveJobSearchDetails, saveJobSource, saveJobSourceKey, testJobSource } from "./actions";
+import { saveCustomJobSource, saveJobSearchDetails, saveJobSource, saveJobSourceKey, testJobSource } from "./actions";
 import { JobSearchSection } from "./job-search-section";
 
 vi.mock("./actions", () => ({
   saveJobSource: vi.fn(),
+  saveCustomJobSource: vi.fn(),
   saveJobSearchDetails: vi.fn(),
   saveJobSourceKey: vi.fn(),
   testJobSource: vi.fn(),
@@ -21,6 +22,7 @@ const off: JobSearchSettingsView = {
   adzuna: { appId: "", keyState: "none" },
   arbeitsagentur: { offered: true, acceptedAt: null },
   freehire: { host: "freehire.me" },
+      custom: { url: "", username: "", passwordState: "none" },
 };
 const ACCEPTED = "2026-10-23T09:00:00.000Z";
 const withSource = (view: Partial<JobSearchSettingsView>): JobSearchSettingsView => ({ ...off, ...view });
@@ -44,6 +46,7 @@ describe("JobSearchSection", () => {
       "Adzuna",
       "FreeHire",
       "Bundesagentur für Arbeit",
+      "Custom",
       "Off",
     ]);
     expect(screen.getByRole("radio", { name: "Off" })).toBeChecked();
@@ -128,7 +131,7 @@ describe("JobSearchSection", () => {
 
   it("leaves the Arbeitsagentur out when the server doesn't offer it", () => {
     render(<JobSearchSection initial={withSource({ arbeitsagentur: { offered: false, acceptedAt: null } })} />);
-    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(["JSearch", "Adzuna", "FreeHire", "Off"]);
+    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(["JSearch", "Adzuna", "FreeHire", "Custom", "Off"]);
   });
 
   it("says which FreeHire it searches, with no key to ask for", () => {
@@ -163,4 +166,17 @@ describe("JobSearchSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "Test connection" }));
     expect(await screen.findByText("Something went wrong on the server. Please try again.")).toBeInTheDocument();
   });
+});
+
+
+it("saves Custom URL and optional credentials, then forgets the password", async () => {
+  vi.mocked(saveCustomJobSource).mockResolvedValue({ ok: true, data: withSource({ source: "CUSTOM", custom: { url: "http://jobfeed:8000", username: "reader", passwordState: "set" } }) });
+  render(<JobSearchSection initial={withSource({ source: "CUSTOM" })} />);
+  await userEvent.type(screen.getByLabelText("Service URL"), "http://jobfeed:8000");
+  await userEvent.type(screen.getByLabelText("Username (optional)"), "reader");
+  await userEvent.type(screen.getByLabelText("Password (optional)"), "secret");
+  await userEvent.click(screen.getByRole("button", { name: "Save custom source" }));
+  expect(saveCustomJobSource).toHaveBeenCalledWith({ url: "http://jobfeed:8000", username: "reader", password: { action: "set", value: "secret" } });
+  await waitFor(() => expect(screen.getByLabelText("Password (optional)")).toHaveValue(""));
+  expect(screen.getByLabelText("Password (optional)")).toHaveAttribute("placeholder", "Saved · leave empty to keep it");
 });

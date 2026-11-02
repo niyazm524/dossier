@@ -15,6 +15,7 @@ import { JOB_SOURCES, type JobSource, type JSearchHost } from "@/lib/job-search/
 import { FREEHIRE_URL, JSEARCH_KEY_URLS, SOURCE_INFO, type JobSearchSettingsView } from "@/lib/job-search/sources";
 import { cn } from "@/lib/cn";
 
+import { CustomSourceSettings } from "./custom-source-settings";
 import { saveJobSearchDetails, saveJobSource, saveJobSourceKey, testJobSource } from "./actions";
 import { SettingsSectionIntro } from "./settings-screen";
 
@@ -134,6 +135,7 @@ export function JobSearchSection({ initial }: { initial: JobSearchSettingsView }
           </p>
 
           <Card className="flex flex-col gap-5">
+            {source === "CUSTOM" && <CustomSourceSettings initial={view.custom} onSaved={(result) => { changed(); return apply(result); }} />}
             {source === "JSEARCH" && (
               <>
                 <HostChoice host={view.jsearch.host} onChange={(host) => void chooseHost(host)} />
