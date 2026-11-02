@@ -5,6 +5,7 @@ import { daysBetween, formatShortCalendarDate } from "@/lib/dates";
 import type { PostingFit } from "@/lib/fit";
 
 import { countryCodeFor } from "./countries";
+import type { JobSearchProblem } from "./errors";
 import { SOURCE_INFO } from "./sources";
 
 // Job search (E14): what a search asks for and what a posting looks like,
@@ -108,7 +109,7 @@ export type PostingState = {
 export type ShownPosting = FoundPosting & { state: PostingState };
 
 /** What went wrong with a search, in words for the screen (E14-6). */
-export type SearchProblem = { ok: false; problem: "pending" | "off" | "not-accepted" | "no-country" | "no-key" | "key" | "quota" | "country" | "unavailable" | "changed"; message: string };
+export type SearchProblem = { ok: false; problem: JobSearchProblem | "no-country"; message: string };
 
 /** What a search gives the screen: postings, or what went wrong. */
 export type SearchOutcome = { ok: true; postings: ShownPosting[]; next: string | null } | SearchProblem;
